@@ -1,0 +1,15 @@
+# The slice built so far runs on the standard library alone (sqlite3, hashlib).
+# Listed here are the deps the later stages will pull in, kept minimal.
+
+# Testing
+pytest>=8.0
+
+# Calendar output (Day 5)
+ics>=0.7.2
+
+# Model client for Muse Glimmer — swapped for the chosen route (Day 2+):
+#   - hosted (Baseten/Meta API): openai-compatible client
+#   - local GGUF (Kaggle 2xT4): llama-cpp-python
+# left commented until the route is fixed.
+# openai>=1.40
+# llama-cpp-python>=0.3.0

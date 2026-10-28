@@ -1,0 +1,23 @@
+# Private data — never leaves the Mac (waiver gives organizers a perpetual
+# licence to anything in the repo, so real chat text and names stay out).
+private/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+anon_map.json
+ntfy-topic
+
+# Ground-truth eval log lives locally; it quotes real messages.
+Deadlines_*.md
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# Local scratch
+.DS_Store
+out/
