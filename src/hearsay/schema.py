@@ -47,6 +47,7 @@ class Claim:
     date: str | None          # ISO date, or None when the message is undated
     portion: str | None
     source_msg_id: int
+    source_ts: datetime       # when the claim was asserted — folds and stale-checks need it
     trust: Trust
     confidence: float         # 0..1 from the model
     raw_quote: str            # the exact line, for source-linking in outputs

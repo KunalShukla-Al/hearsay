@@ -134,8 +134,54 @@ is exercised through a fake `call_model`. Wiring the actual route is a "Then"
 task once the card/Kaggle decision is made; `model.py` is the only file it
 touches.
 
+## Day 3 — 29 Oct 2026 · tracking + alias linking
+
+**What this day adds.** `src/hearsay/track.py` turns the flat list of `Claim`s
+into `DeadlineItem`s — one object per real deadline, carrying its whole history.
+This is where scattered messages become a thing I can show on a calendar.
+
+**The hard part is identity: when are two claims the same deadline?** One test
+is named three ways — "OS FT-II", "CT 1", "FJ2". I link claims two ways:
+
+1. **Shared instance alias.** `aliases_in()` pulls codes like FT-II, CT-1,
+   FJ-II, LLT-I, CLA-T1 out of a line and normalises them to `PREFIX-ROMAN`
+   (so "CT 1", "ct-1", "CT-I" all become `CT-I`). Message 100 says "OS FT-II
+   (FJ2)", so `FT-II` and `FJ-II` co-occur in one line and bind to one item
+   immediately. Across messages, any shared alias merges — and a claim whose
+   aliases bridge two existing items fuses them.
+2. **Bare subject+kind fallback.** Message 101, "OS test moved to 30 Oct", has
+   no instance code. A no-alias claim attaches to the one open item of that
+   subject and kind, so it joins FT-II instead of spawning a phantom second OS
+   exam. If there's zero or more than one candidate, it starts its own item
+   rather than guess.
+
+**Why claims are folded in time order.** I sort by `source_ts` before folding,
+so the faculty announcement (13 Oct) creates the FT-II item before the vaguer
+relay (25 Oct) arrives to join it. That meant `Claim` needed to carry *when* it
+was asserted — I added `source_ts` to the schema and both extractors stamp it
+from the message. Stale-detection on Day 4 will lean on the same field.
+
+**The canonical key.** `OS:FT-II`, `DSA:lab`. When an item has instance aliases,
+the key prefers the written-test name (FT > CT > LLT > CLA-T > LLJ > FJ) so the
+same test keys the same way however it was first mentioned; with no alias it
+falls back to `subject:kind`.
+
+**What I deliberately did NOT do today.** The fixture holds a real contradiction
+— faculty say the OS exam is 29 Oct, a student says it "moved to 30 Oct". Day 3
+does not adjudicate it. `current_date` is naively the most recently asserted
+dated claim, so right now the item reads 30 Oct — the *wrong* answer — and both
+claims sit in its history. Fixing that (trust-weighting faculty over a relay,
+and raising `moved` / `conflict` flags with an ask-when-unsure draft) is exactly
+Day 4's job. I wrote the test to assert the naive 30 Oct on purpose, so Day 4's
+change is visible as the item flipping back to 29 Oct.
+
+**Proof.** `tests/test_track.py` (6 tests): alias normalisation; the fixture
+folding to exactly `{OS:FT-II, DSA:lab}`; co-occurring aliases landing on one
+item; the bare relay joining FT-II (history `{100, 101}`); the undated DSA lab
+surviving with `current_date=None`; and a shared `FT-I` alias merging two
+synthetic messages. Days 1–2 stay green after the schema change. **17 passing.**
+
 ### Plan for the rest of the week
-- **Day 3:** `track.py` + alias-linking ("OS FT-II" = "CT 1" = "FJ2").
 - **Day 4:** `trust.py` + `verify.py` — source ranking, moved-date and conflict
   flags, the ask-when-unsure draft.
 - **Day 5:** `outputs/` — ICS feed, one-screen week, wire up the ntfy push.
