@@ -222,8 +222,43 @@ flags `moved` and asks nothing; an unbacked CR-vs-classmate split asks with both
 options; and a long-unconfirmed upcoming date flags `stale`. Days 1–3 stay
 green. **23 passing.**
 
+## Day 5 — 29 Oct 2026 · outputs
+
+**What this day adds.** `src/hearsay/outputs/` — the three surfaces a person
+actually sees, each reading the resolved `DeadlineItem`s and nothing else, so one
+set of items drives all of them.
+
+- **`ics.py` — a calendar feed.** Every dated item becomes an all-day VEVENT the
+  phone can subscribe to. The detail I care about: the DESCRIPTION cites the
+  claim that *backs the chosen date* (highest trust, then most recent), so the
+  fixture's OS entry reads "source (faculty): OS FT-II (FJ2) on 29 Oct …" — the
+  faculty post, not the later "moved to 30 Oct" rumor. Undated items (the DSA
+  lab) carry no date, so they stay out of the calendar and surface in the week
+  view instead. Text is escaped and long lines folded per RFC 5545 so it
+  validates in Apple/Google Calendar — checked the rendered file by eye.
+- **`week.py` — a one-screen week.** Plain text: everything dated in the next 7
+  days, oldest first, with portion and flags, then a "Need to confirm" section
+  carrying the drafted questions. The fixture shows `2026-10-29 OS FT-II … [conflict]`
+  and the DSA lab's "when is it due?".
+- **`push.py` — the ntfy morning push.** `compose` builds a short title/body (a
+  push can't deep-link to one message, so it names items and counts what needs
+  confirming); `send` POSTs to `ntfy.sh/<topic>` with the HTTP call injectable,
+  so tests and replay never fire a real push. The topic is passed in (read from
+  `~/.config/noticeagent/ntfy-topic`), never committed.
+
+**Proof.** `tests/test_outputs.py` (6 tests): one VEVENT for the dated exam and
+none for the undated lab; the DESCRIPTION cites the faculty claim and not the
+rumor; commas are escaped; the week view lists the exam with its conflict flag
+and the lab's question; the push counts "1 this week" + "1 to confirm"; and
+`send` uses an injected post rather than the network. All prior days green.
+**29 passing.**
+
+**Open for me to decide when I'm back.** The push needs a trigger — a 06:55
+`pmset` wake plus a launch agent that runs ingest→…→send once. That's a Mac
+wiring task (and needs Full Disk Access for the real DB), so it waits until I'm
+at the keyboard; the composing and sending are done and tested.
+
 ### Plan for the rest of the week
-- **Day 5:** `outputs/` — ICS feed, one-screen week, wire up the ntfy push.
 - **Day 6:** `eval/replay.py` + `eval/baseline.py` — time-travel scoring vs the
   hand-checked log, against "latest message wins".
 - **Then:** real Glimmer (Kaggle or Baseten), the 3-minute demo video, README.
