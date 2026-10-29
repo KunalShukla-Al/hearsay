@@ -82,9 +82,59 @@ prefilter must not lose. I loosened the net: bare ordinals ("11th") count as a
 date cue, and "experiment"/"exercise"/"ex" count as assessment words. The test
 now asserts this message survives.
 
+## Day 2 — 29 Oct 2026 · extraction
+
+**What this day adds.** `src/hearsay/model.py` — the stage that turns a filtered
+message into structured `Claim`s. A message like *"OS FT-II (FJ2) on 29 Oct
+2026, Units II & III"* becomes `Claim(kind="exam", subject="OS",
+date="2026-10-29", portion="Units II & III", trust=FACULTY, …)`. From here on
+the pipeline reasons over claims, not prose.
+
+**The one decision everything hangs on: an `Extractor` seam.** I don't have
+Glimmer running yet (no card, no Kaggle/Baseten route chosen), and I refuse to
+let that block tracking, trust, verify and the eval. So the pipeline depends on
+an `Extractor` protocol — `extract(messages) -> list[Claim]` — and two concrete
+ones live behind it:
+
+- `StubExtractor` — rules only, deterministic, runs today with nothing. It reads
+  subject and kind from vocabulary and resolves the date forms my groups
+  actually use (explicit `29 Oct 2026`, bare `30 Oct`, `dd/mm`, weekday names,
+  `today`/`tomorrow`), always relative to the message's *own* send day so it
+  behaves identically under replay.
+- `GlimmerExtractor` — the real model behind a single `call_model(prompt) ->
+  text` callable. That callable is the *only* thing that differs between the
+  free Kaggle GGUF and a hosted Baseten endpoint, so the rest of the code never
+  learns which route is live. It builds a strict-JSON prompt, pulls the first
+  JSON block out of a chatty reply (`_first_json`), and a malformed reply drops
+  that one message rather than crashing the run.
+
+**The honest limit I built in on purpose.** Message 102 says *"try to complete
+till 11th experiment"*. That `11th` is a lab count, not the 11th of a month. The
+stub must **not** invent `2026-10-11` — so its date resolver only accepts an
+ordinal next to a month, and returns `None` here. The claim is still created (a
+real, undated DSA lab item); it just carries no date. This is deliberate: the
+gap between the stub returning `None` and Glimmer reading the sentence correctly
+is precisely what the Day 6 eval will measure, which is why the stub also serves
+as the "rules-only floor" baseline.
+
+**Trust comes from the sender, never the model.** `trust_of()` maps the
+anonymised label (FACULTY-*, CR, STUDENT-*, me) to the `Trust` rank. I kept this
+out of the model's hands on purpose — a student relay confidently asserting a
+date must not outrank faculty just because the model sounded sure. Both
+extractors stamp trust the same way.
+
+**Proof.** `tests/test_model.py` (6 tests, no pytest, no credits): the faculty
+announcement extracts the dated exam at FACULTY trust; the student "moved to 30
+Oct" relay extracts at RELAY trust; the `11th experiment` trap resolves to
+`date=None`; and `GlimmerExtractor` parses a JSON reply wrapped in chatter while
+surviving a junk reply. Day 1's slice stays green (5 tests). Total 11 passing.
+
+**Still deferred by design.** No real model call runs yet — `GlimmerExtractor`
+is exercised through a fake `call_model`. Wiring the actual route is a "Then"
+task once the card/Kaggle decision is made; `model.py` is the only file it
+touches.
+
 ### Plan for the rest of the week
-- **Day 2:** `model.py` — the Muse Glimmer interface with a deterministic stub
-  extractor, so `track` can be built and tested before any credits land.
 - **Day 3:** `track.py` + alias-linking ("OS FT-II" = "CT 1" = "FJ2").
 - **Day 4:** `trust.py` + `verify.py` — source ranking, moved-date and conflict
   flags, the ask-when-unsure draft.
