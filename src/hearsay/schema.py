@@ -66,3 +66,4 @@ class DeadlineItem:
     history: list[Claim] = field(default_factory=list)
     flags: list[str] = field(default_factory=list)    # "moved", "conflict", "stale"
     needs_question: bool = False
+    question: str | None = None   # a line to send when the agent can't settle it alone

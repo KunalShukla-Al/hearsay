@@ -181,9 +181,48 @@ item; the bare relay joining FT-II (history `{100, 101}`); the undated DSA lab
 surviving with `current_date=None`; and a shared `FT-I` alias merging two
 synthetic messages. Days 1–2 stay green after the schema change. **17 passing.**
 
+## Day 4 — 29 Oct 2026 · trust + verify
+
+**What this day adds.** Two small modules that turn a pile of tracked history
+into one trustworthy answer plus an honest list of caveats. `trust.py` chooses
+the date; `verify.py` flags what a human should still check and drafts the
+question to send. This is the "verified, source-linked" half of the pitch — the
+part that separates the project from a basic chatbot for the judges.
+
+**trust.resolve — rank, then recency.** Among the dated claims on an item it
+takes the highest rank (FACULTY > CR > RELAY > INFERENCE), and within a rank the
+most recent. On the fixture that flips the OS exam from the Day-3 naive *30 Oct*
+(the student's later rumor) back to the faculty's **29 Oct**. The losers are not
+deleted — they stay in history so the next step can point at them.
+
+**verify — three flags, and the discipline of when to ask.**
+- **moved**: the winning rank asserted more than one date over time — a real
+  reschedule. A later faculty "moved to 30 Oct" correctly wins, and the item is
+  flagged so the change is visible.
+- **conflict**: a different rank disagrees with the chosen date. The student's
+  "30 Oct" rumor raises this even though faculty overrules it — surfaced, never
+  hidden.
+- **stale**: the date is still upcoming but nothing has confirmed it in
+  `stale_days` (14) — worth a re-check. Needs the clock, so `verify` takes
+  `today`; replay will pass a `FakeClock`'s day and get the same verdicts.
+
+The judgement I care about most: **when does the agent actually ask?** Only when
+it is genuinely unsure — an undated item, or a disagreement with *no* faculty
+backing. The fixture's rumor is flagged but asks nothing, because faculty
+already settles it; nagging about a rumor the rank system overrules would make
+the tool annoying. An unbacked CR-vs-classmate split *does* ask, and the drafted
+line quotes both dates with who said each and when, ready to paste to the CR.
+The undated DSA lab asks for a date and quotes the exact source line. I added a
+`question` field to the schema to carry that draft.
+
+**Proof.** `tests/test_verify.py` (6 tests): faculty beats the relay and the
+fixture date becomes 29 Oct with a `conflict` flag; the overruled rumor asks
+nothing; the undated lab asks "when is it due?"; a two-post faculty reschedule
+flags `moved` and asks nothing; an unbacked CR-vs-classmate split asks with both
+options; and a long-unconfirmed upcoming date flags `stale`. Days 1–3 stay
+green. **23 passing.**
+
 ### Plan for the rest of the week
-- **Day 4:** `trust.py` + `verify.py` — source ranking, moved-date and conflict
-  flags, the ask-when-unsure draft.
 - **Day 5:** `outputs/` — ICS feed, one-screen week, wire up the ntfy push.
 - **Day 6:** `eval/replay.py` + `eval/baseline.py` — time-travel scoring vs the
   hand-checked log, against "latest message wins".
