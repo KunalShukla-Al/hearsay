@@ -258,9 +258,72 @@ and the lab's question; the push counts "1 this week" + "1 to confirm"; and
 wiring task (and needs Full Disk Access for the real DB), so it waits until I'm
 at the keyboard; the composing and sending are done and tested.
 
+## Day 6 — 30 Oct 2026 · the time-travel eval
+
+**What this day adds.** `src/hearsay/eval/` — `replay.py` and `baseline.py`, the
+scoring harness that makes "the agent is better than just reading the latest
+message" a number instead of a claim. This is the day the blueprint's one idea
+(*replay and live are the same pipeline on different clocks*) finally earns its
+keep: the replay reasons over the past by sliding a `FakeClock`, nothing more.
+
+**The baseline I have to beat.** `baseline.py` is "latest message wins": take the
+most recently asserted date per tracked item, no source rank, no verify, no
+questions. It deliberately reuses `track`'s alias-linking, so the *only* thing
+separating it from the agent is trust + verify — which is exactly the thing the
+eval is meant to price. If the agent can't beat this, the whole verification
+pitch is hot air.
+
+**How a day of replay works.** `agent_view(messages, instant)` sets a `FakeClock`
+to `instant`, keeps only the messages at or before it, and runs the real
+pipeline — `track -> adjudicate` (trust then verify) with `today = instant`.
+`baseline_view` does the same but ends in `latest_wins`. So "what would the agent
+have told me on 21 Oct?" is just the clock sitting at 21 Oct over the messages
+that existed then. Extraction runs on the slice, not on everything-then-filtered,
+so a real Glimmer later only ever sees past messages — replay stays honest about
+what was knowable.
+
+**Scoring, and the one trap I avoided.** `score()` gives recall and precision on
+*which* deadlines surfaced, and date accuracy on the ones that should carry a
+date. The trap: an undated item (the DSA lab) must count as *right* only when the
+view also leaves it undated — rewarding a guess there would reward exactly the
+hallucination the `11th experiment` test was built to forbid. So undated items
+are scored separately (`undated_held`) and never fold into date accuracy.
+
+**Ground truth without leaking anything.** The eval scores against a
+`key | date | portion` Markdown table. The real term log is private and
+git-ignored (`private/Deadlines_till_20_Nov_2026.md`), so I committed a tiny
+`tests/fixtures/ground_truth.md` for the synthetic chat and made `--truth` point
+the same parser at the real file when I run it on my Mac. The eval therefore runs
+today, in CI-less `python tests/test_eval.py`, with no private data and no model.
+
+**The headline the replay prints.** On the fixture, three dates matter: faculty
+announce FT-II for 29 Oct (13 Oct), the DSA lab arrives undated (21 Oct), then a
+classmate relays "moved to 30 Oct" (25 Oct). The timeline shows agent and
+baseline *agreeing* at 1/1 until the 25th — then the baseline drops to 0/1 (it
+takes the rumour) while the agent holds 29 Oct on faculty's rank. Date accuracy
+1/1 vs 0/1 on the one contested deadline, which is the whole product in one line.
+
+**Where I placed it, and why not top-level.** The plan wrote `eval/replay.py`;
+I put it under `src/hearsay/eval/` instead, a sub-package beside `outputs/`. It
+shares the pipeline imports cleanly and is import-testable like everything else,
+and `python -m hearsay.eval.replay` is the demo command. `__init__.py` is kept
+import-free on purpose — re-exporting the module that also runs under `-m` gives
+a double-import warning that would show up on camera.
+
+**Proof.** `tests/test_eval.py` (6 tests): the truth table parses dated and
+undated items; after the rumour the agent holds 29 Oct and the baseline takes
+30; the final score has both at full recall but agent date accuracy above
+baseline; before the rumour they agree (so the gap is provably the rumour's
+doing); and the replay timeline diverges only on the 25th. Days 1–5 stay green.
+**35 passing.**
+
+**Still deferred by design.** Confidence calibration is in the blueprint's metric
+list but waits for real Glimmer — the stub's confidence is a constant, so
+calibrating it would measure nothing. Same for a precision/recall curve over a
+large real log; the fixture has two items. Both land once the model route is live
+and the private log is hand-checked.
+
 ### Plan for the rest of the week
-- **Day 6:** `eval/replay.py` + `eval/baseline.py` — time-travel scoring vs the
-  hand-checked log, against "latest message wins".
 - **Then:** real Glimmer (Kaggle or Baseten), the 3-minute demo video, README.
 
 ### Open for me to decide when I'm back

@@ -27,6 +27,20 @@ python scripts/make_fixture.py tests/fixtures/chat.sqlite
 python tests/test_ingest.py
 ```
 
+## Score it (the replay eval)
+Replay the term on a fake clock and score the agent against "latest message
+wins", day by day:
+```bash
+python tests/test_eval.py                    # the 6 scoring tests
+PYTHONPATH=src python -m hearsay.eval.replay  # the timeline + headline
+```
+On the synthetic fixture the baseline flips to a classmate's wrong "moved to 30
+Oct" the day it lands, while the agent holds faculty's 29 Oct — date accuracy
+1/1 vs 0/1 on the contested deadline. It scores against a committed
+`tests/fixtures/ground_truth.md`; point it at the real, git-ignored term log
+with `--truth private/Deadlines_till_20_Nov_2026.md` (same `key | date | portion`
+shape) and `--db`/`--roster` for real chats.
+
 ## Pointing it at real chats
 ```bash
 # one-time: grant Full Disk Access to your terminal, then:
