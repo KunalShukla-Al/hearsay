@@ -41,6 +41,19 @@ Oct" the day it lands, while the agent holds faculty's 29 Oct — date accuracy
 with `--truth private/Deadlines_till_20_Nov_2026.md` (same `key | date | portion`
 shape) and `--db`/`--roster` for real chats.
 
+## Run it live
+Same pipeline as the eval, on a real clock, feeding the output surfaces:
+```bash
+PYTHONPATH=src python -m hearsay.run                    # this week's view (fixture)
+PYTHONPATH=src python -m hearsay.run --out ics          # the calendar feed
+PYTHONPATH=src python -m hearsay.run --as-of 2026-10-28 # what I'd have seen that day
+```
+`--as-of <iso>` pins a fake clock and shows only what was known by then, so live
+and replay are literally the same `pipeline()` — the eval asserts they match
+key‑for‑key. With no flag it reads the whole chat at the real clock. `--out push`
+sends to an ntfy topic (`--ntfy-topic` or `~/.config/noticeagent/ntfy-topic`) and
+is the only path that touches the network.
+
 ## Pointing it at real chats
 ```bash
 # one-time: grant Full Disk Access to your terminal, then:

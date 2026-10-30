@@ -323,6 +323,43 @@ calibrating it would measure nothing. Same for a precision/recall curve over a
 large real log; the fixture has two items. Both land once the model route is live
 and the private log is hand-checked.
 
+## Day 7 — 31 Oct 2026 · the live entry point
+
+**What this day adds.** `src/hearsay/run.py` — the product as one command. Until
+today the whole pipeline existed only as stage modules and the replay eval; there
+was no single "run it on my real chats now." `run.py` is that, and it is built so
+that "live" is provably not a second implementation.
+
+**The move that makes the thesis real.** The blueprint's one line is *replay and
+live are the same pipeline on different clocks*. Day 6 ran the stages at a
+`FakeClock` instant to score them; today I pulled the three middle stages —
+extract, track, trust+verify — into one function, `pipeline(messages, today)`,
+and had **both** sides call it. The eval's `agent_view` now *is* `pipeline` at a
+past instant; `run.main` is `pipeline` at `RealClock` now, piped to the output
+surfaces. So the thing the eval measured is the thing that runs live, not a
+look-alike. `test_run.py` pins a `FakeClock` with `--as-of` and asserts the live
+result equals `agent_view` key-for-key — if they ever diverge, a test breaks.
+
+**The clock is the only knob.** `run.py` takes `--as-of <iso>` to inject a
+`FakeClock` (and then only feeds it the messages known by then), so `python -m
+hearsay.run --as-of 2026-10-28` prints exactly what the morning push would have
+said that day. With no flag it is `RealClock` and the whole chat — the product.
+Outputs are chosen with `--out week|ics|push`; `week` and `ics` print, `push`
+sends to the ntfy topic (from `--ntfy-topic` or `~/.config/noticeagent/ntfy-topic`)
+and is the only path that touches the network, so a bare run never does.
+
+**Still fixture-first.** Like the eval, `run.py` defaults to the synthetic
+fixture and the fixture roster, so it runs today with no FDA and no model;
+`--db`/`--roster` point it at the real, git-ignored data. The push *trigger*
+(a 06:55 pmset wake + launch agent firing `--out push`) is still the Mac-wiring
+task from Day 5, waiting until I'm at the keyboard with Full Disk Access.
+
+**Proof.** `tests/test_run.py` (4 tests): `load_messages` keeps only the three
+dated fixture lines; `pipeline` resolves OS FT-II to faculty's 29 Oct and holds
+the DSA lab undated; the live pipeline equals the replay `agent_view` key-for-key
+(the shared-code guard); and the `week`/`ics` CLI surfaces run clean. Days 1–6
+stay green. **39 passing.**
+
 ### Plan for the rest of the week
 - **Then:** real Glimmer (Kaggle or Baseten), the 3-minute demo video, README.
 

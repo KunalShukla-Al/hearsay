@@ -32,9 +32,9 @@ from ..clock import FakeClock
 from ..ingest import read_messages
 from ..model import StubExtractor
 from ..prefilter import prefilter
+from ..run import pipeline
 from ..schema import DeadlineItem, Message
 from ..track import track
-from ..verify import adjudicate
 from .baseline import latest_wins
 
 _UNDATED = {"", "none", "-", "undated", "n/a"}
@@ -74,11 +74,11 @@ def _known(messages: list[Message], instant: datetime) -> list[Message]:
 
 
 def agent_view(messages: list[Message], instant: datetime, extractor=None) -> dict[str, DeadlineItem]:
-    """The full pipeline (track -> trust -> verify) over messages known by `instant`."""
+    """The product pipeline over messages known by `instant` — the same `pipeline`
+    the live run uses, just at a past instant on a FakeClock."""
 
-    extractor = extractor or StubExtractor()
-    items = track(extractor.extract(_known(messages, instant)))
-    return {it.key: it for it in adjudicate(items, instant.date())}
+    items = pipeline(_known(messages, instant), instant.date(), extractor)
+    return {it.key: it for it in items}
 
 
 def baseline_view(messages: list[Message], instant: datetime, extractor=None) -> dict[str, DeadlineItem]:
