@@ -11,6 +11,7 @@ Run it:
   PYTHONPATH=src python -m hearsay.run --out ics             # the calendar feed
   PYTHONPATH=src python -m hearsay.run --as-of 2026-10-28    # show what I'd have seen that day
   PYTHONPATH=src python -m hearsay.run --db private/chat.sqlite --roster private/roster.json --out push
+  GLIMMER_BASE_URL=... GLIMMER_MODEL=... python -m hearsay.run --model glimmer   # the real model
 """
 
 from __future__ import annotations
@@ -24,8 +25,9 @@ from datetime import date, datetime, timezone
 from .anonymize import anonymize
 from .clock import Clock, FakeClock, RealClock
 from .ingest import read_messages
-from .model import StubExtractor
+from .model import GlimmerExtractor, StubExtractor
 from .outputs import compose, send, to_ics, week_view
+from .route import glimmer_route
 from .prefilter import prefilter
 from .schema import DeadlineItem, Message
 from .track import track
@@ -70,6 +72,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--db", help="WhatsApp DB copy (default: the test fixture)")
     ap.add_argument("--roster", help="JSON {real name: role} for anonymize (real data)")
     ap.add_argument("--out", choices=["week", "ics", "push"], default="week")
+    ap.add_argument("--model", choices=["stub", "glimmer"], default="stub",
+                    help="glimmer uses the live route (GLIMMER_BASE_URL, GLIMMER_MODEL)")
     ap.add_argument("--ntfy-topic", help="ntfy topic for --out push")
     ap.add_argument("--as-of", help="pin the clock to an ISO datetime (replay-style) instead of now")
     args = ap.parse_args(argv)
@@ -83,7 +87,8 @@ def main(argv: list[str] | None = None) -> int:
     messages = load_messages(args.db, args.roster)
     if args.as_of:
         messages = [m for m in messages if m.ts <= clock.now()]   # only what was known by then
-    items = pipeline(messages, today)
+    extractor = GlimmerExtractor(glimmer_route()) if args.model == "glimmer" else None
+    items = pipeline(messages, today, extractor)
 
     if args.out == "week":
         print(week_view(items, today))

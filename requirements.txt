@@ -7,9 +7,10 @@ pytest>=8.0
 # Calendar output (Day 5)
 ics>=0.7.2
 
-# Model client for Muse Glimmer — swapped for the chosen route (Day 2+):
-#   - hosted (Baseten/Meta API): openai-compatible client
-#   - local GGUF (Kaggle 2xT4): llama-cpp-python
-# left commented until the route is fixed.
+# Model route for Muse Glimmer (hearsay.route): an OpenAI-compatible POST over
+# the standard library, so no runtime dep. The same route serves both options —
+# a local GGUF on Kaggle 2xT4 (llama.cpp's server) or hosted Baseten — through
+# GLIMMER_BASE_URL / GLIMMER_MODEL / GLIMMER_API_KEY. The clients below are
+# optional alternatives, not required.
 # openai>=1.40
 # llama-cpp-python>=0.3.0
