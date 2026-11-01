@@ -369,3 +369,44 @@ stay green. **39 passing.**
 - Model route: Kaggle GGUF (free, qualifies for the open-weight bonus) vs
   hosted Baseten (needs a card). The code doesn't care; only `model.py`'s config
   changes.
+
+## Day 8 — 1 Nov 2026 · the live route to Glimmer
+
+**What this day adds.** `src/hearsay/route.py` — the real `call_model` that
+`GlimmerExtractor` has been missing. Until today the extractor existed and was
+tested against an *injected* fake call; nothing actually reached a model. Now
+there is one, and `python -m hearsay.run --model glimmer` runs the pipeline on
+the real thing.
+
+**Why the route is one HTTP call, not two integrations.** Day 7 left me a choice
+I'd rather not bake into the code: free GGUF on Kaggle's 2×T4 vs hosted Baseten.
+I didn't choose; I made the choice not matter. Both serve Glimmer behind an
+OpenAI-compatible endpoint — llama.cpp's own server speaks it, and so does
+Baseten — so the route is a single POST to `/chat/completions`, and the only
+difference between the two is three environment values: `GLIMMER_BASE_URL`,
+`GLIMMER_MODEL`, `GLIMMER_API_KEY` (blank for a local Kaggle server). That keeps
+the blueprint's promise literal: nothing downstream learns which route is live.
+
+**No new dependency.** The route is `urllib` and `json` from the standard
+library, not the `openai` client or `llama-cpp-python` — the request shape is
+small and stable, and a dep I don't need is a dep that can break the eval. The
+HTTP call goes through an injected `transport`, so `test_route.py` checks the
+request shape and the reply parsing with no network and no credentials.
+
+**The stub is still the default.** `run.py` takes `--model {stub,glimmer}`,
+defaulting to `stub`, so a bare run stays offline on the fixture exactly as
+before. Glimmer is opt-in and needs the two env values; without them the route
+raises a clear error instead of a stack trace. A junk or chatty reply reads as
+empty and drops the message, the same contract the extractor already had.
+
+**Proof.** `tests/test_route.py` (5 tests): the route posts an OpenAI request
+carrying the prompt, the model name and `temperature: 0`, and reads
+`choices[0].message.content`; a recorded reply flows all the way into a parsed
+`Claim` (trust still from the sender, not the model); a junk reply comes back
+empty; the auth header is omitted without a key; and `RouteConfig.from_env`
+refuses a half-configured route. Days 1–7 stay green. **44 passing.**
+
+### Still ahead
+- Point it at a real Glimmer once the card/Kaggle route is live, and hand-check
+  the ground-truth log before scoring the model against the stub.
+- The 3-minute demo video and the README.
